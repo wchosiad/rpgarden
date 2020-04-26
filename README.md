@@ -1,2 +1,2 @@
 # rpgarden
-Raspberry. Pi Garden Tender
+Raspberry Pi Garden Tender
