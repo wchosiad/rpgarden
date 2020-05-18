@@ -1,4 +1,5 @@
 from time import sleep
+from os import path
 import configparser
 
 # These are all Adafruit modules that come with CircuitPython
@@ -16,7 +17,7 @@ CHIP_SELECT_PIN = board.D5
 MOISTURE_MCP_PIN = MCP.P0
 
 # This is the path to the configuration file
-RPGARDEN_CONFIG_FILE = "/home/pi/code/rpgarden/rpgarden/rpgarden.ini"
+RPGARDEN_CONFIG_FILE = "/home/pi/code/rpgarden/rpgarden.ini"
 
 # Set up the SPI Bus, The chip select, and the MCP
 spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
@@ -27,52 +28,69 @@ mcp = MCP.MCP3008(spi, cs)
 moistureSensor = AnalogIn(mcp, MOISTURE_MCP_PIN)
 
 # Our starting readings (defaults)
-minVal = 35000
 maxVal = 35000
+minVal = 35000
 
 # get thresholds from config file
-rpgConfig = configparser.ConfigParser() # Create ConfigParser object
-rpgConfig.read(RPGARDEN_CONFIG_FILE)    # Load its data from the file
+rpgConfig = configparser.ConfigParser()  # Create ConfigParser object
+if path.exists(RPGARDEN_CONFIG_FILE):    # Check to see if ini file exists
+    rpgConfig.read(RPGARDEN_CONFIG_FILE) # Load its data from the file
+    # Note: if ini file doesn't exist, this does not throw an error
+
 if 'moisture_sensor_thresholds' in rpgConfig:
     # Create an object to hold a section of the ini file
     moistureSection = rpgConfig['moisture_sensor_thresholds']
 
     # Set variables from the configparser. Changes to the section
     # are stored in the ConfigParser object, rpgConfig
-    minVal = int(moistureSection['bottom'])
+    # Note that all ini file values are treated as strings, so they need to 
+    # be converted when reading or saving
     maxVal = int(moistureSection['top'])
-
-print("============================================")
+    minVal = int(moistureSection['bottom'])
+else:
+    # add the moisture_sensor_thresholds section if it doesn't exist
+    # and save the ini file
+    rpgConfig.add_section("moisture_sensor_thresholds")
+    moistureSection = rpgConfig['moisture_sensor_thresholds']
+    moistureSection["top"] = str(maxVal)
+    moistureSection["bottom"] = str(minVal)
+    with open(RPGARDEN_CONFIG_FILE, 'w') as configfile:
+        rpgConfig.write(configfile)
 
 # Loop, checking to see if the value read is outside of 
 # the existing thresholds
 try:
     while True:
+        foundNewVal = False
         val = moistureSensor.value
-        print("Reading: ", val)
-        if (val < minVal):
-            minVal = val
-            print('***** New Minimum Value: ', minVal)
-
-            # Update the ini file
-            moistureSection['bottom'] = str(minVal)
-            with open(RPGARDEN_CONFIG_FILE, 'w') as configfile:
-                rpgConfig.write(configfile)
 
         if (val > maxVal):
+            foundNewVal = True
             maxVal = val
+            moistureSection['top'] = str(maxVal)
             print('***** New Maximum Value: ', maxVal)
 
-            # Update the ini file
-            moistureSection['top'] = str(maxVal)
+        if (val < minVal):
+            foundNewVal = True
+            minVal = val
+            moistureSection['bottom'] = str(minVal)
+            print('***** New Minimum Value: ', minVal)
+
+        if (foundNewVal):  # Update the ini file
             with open(RPGARDEN_CONFIG_FILE, 'w') as configfile:
                 rpgConfig.write(configfile)
 
-        print("========================= ", minVal, " - ", maxVal)
+        print("Reading:", val, "    Sensor Range:", minVal, "-", maxVal)
         sleep(1)
+
+except KeyboardInterrupt:    
+    pass  # Don't do anything special if user typed Ctrl-C
+
 except Exception as ex:
+    # Handle other exceptions
     print(type(ex))
     print(ex.args)
     print(ex)
+
 finally:
-    print("Range: ", minVal, " - ", maxVal)
+    print("\nFinal Range: ", minVal, " - ", maxVal)
