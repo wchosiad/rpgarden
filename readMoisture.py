@@ -20,7 +20,7 @@ spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
 cs = digitalio.DigitalInOut(CHIP_SELECT_PIN)
 mcp = MCP.MCP3008(spi, cs)
 
-sensor = MoistureSensor(mcp, MOISTURE_MCP_PIN, RPGARDEN_CONFIG_FILE, "moisture_sensor_2")
+sensor = MoistureSensor(mcp, MOISTURE_MCP_PIN, RPGARDEN_CONFIG_FILE, "moisture_sensor_1")
 
 try:
     while True:

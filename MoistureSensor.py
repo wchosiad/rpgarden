@@ -44,7 +44,7 @@ class MoistureSensor:
                     self.rpgConfig.write(configfile)
             
             # Factor for converting readings to a 0-100 range
-            self.factor = float((self.maxVal - self.minVal) / VALUE_RANGE_SIZE)
+            self.factor = float(self.maxVal - self.minVal) / float(VALUE_RANGE_SIZE)
 
         except Exception as ex:
             # Handle other exceptions
@@ -53,6 +53,7 @@ class MoistureSensor:
             print(ex)
             raise(ex)
 
+    # Returns raw value
     def read_raw(self):
         foundNewBounds = False
         val = self.sensor.value
@@ -68,15 +69,16 @@ class MoistureSensor:
             self.moistureSection['bottom'] = str(self.minVal)
 
         if (foundNewBounds):  # Update the ini file
-            self.factor = float((self.maxVal - self.minVal) / VALUE_RANGE_SIZE)
+            self.factor = float(self.maxVal - self.minVal) / float(VALUE_RANGE_SIZE)
             with open(self.iniFileName, 'w') as configfile:
                 self.rpgConfig.write(configfile)
 
         return val
     
+    # Reads value from sensor and returns value converted to range from 0 to VALUE_RANGE_SIZE
     def read(self):
         return self.convert(self.read_raw())
 
-    # converts raw values to something from0 to VALUE_RANGE_SIZE
+    # converts raw values to something from 0 to VALUE_RANGE_SIZE
     def convert(self, val):
-        return (val - self.minVal) / self.factor
+        return float(val - self.minVal) / self.factor

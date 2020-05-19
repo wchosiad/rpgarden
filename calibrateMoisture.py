@@ -1,3 +1,7 @@
+# File: calibrateMoisture.py
+# --------------------------
+# Run this program for a while while moving the moisture sensor 
+# in and out of the water.
 from time import sleep
 from os import path
 import configparser
@@ -32,26 +36,25 @@ maxVal = 35000
 minVal = 35000
 
 # get thresholds from config file
-rpgConfig = configparser.ConfigParser()  # Create ConfigParser object
-if path.exists(RPGARDEN_CONFIG_FILE):    # Check to see if ini file exists
-    rpgConfig.read(RPGARDEN_CONFIG_FILE) # Load its data from the file
+rpgConfig = configparser.ConfigParser()  # Create ConfigParser
+if path.exists(RPGARDEN_CONFIG_FILE):    # if ini file exists...
+    rpgConfig.read(RPGARDEN_CONFIG_FILE) # Load data from the file
     # Note: if ini file doesn't exist, this does not throw an error
 
-if 'moisture_sensor_thresholds' in rpgConfig:
-    # Create an object to hold a section of the ini file
-    moistureSection = rpgConfig['moisture_sensor_thresholds']
+if 'moisture_sensor_1' in rpgConfig:
+    # Create a section object to hold part of the ini file
+    moistureSection = rpgConfig['moisture_sensor_1']
 
-    # Set variables from the configparser. Changes to the section
-    # are stored in the ConfigParser object, rpgConfig
-    # Note that all ini file values are treated as strings, so they need to 
-    # be converted when reading or saving
+    # Set variables from the configparser.
+    # Note that all ini file values are treated as strings, so they 
+    # need to be converted when reading or saving
     maxVal = int(moistureSection['top'])
     minVal = int(moistureSection['bottom'])
 else:
-    # add the moisture_sensor_thresholds section if it doesn't exist
+    # add the moisture_sensor_1 section if it doesn't exist
     # and save the ini file
-    rpgConfig.add_section("moisture_sensor_thresholds")
-    moistureSection = rpgConfig['moisture_sensor_thresholds']
+    rpgConfig.add_section("moisture_sensor_1")
+    moistureSection = rpgConfig['moisture_sensor_1']
     moistureSection["top"] = str(maxVal)
     moistureSection["bottom"] = str(minVal)
     with open(RPGARDEN_CONFIG_FILE, 'w') as configfile:
@@ -80,7 +83,7 @@ try:
             with open(RPGARDEN_CONFIG_FILE, 'w') as configfile:
                 rpgConfig.write(configfile)
 
-        print("Reading:", val, "    Sensor Range:", minVal, "-", maxVal)
+        print("Reading:", val, " Sensor Range:", minVal, "-", maxVal)
         sleep(1)
 
 except KeyboardInterrupt:    
