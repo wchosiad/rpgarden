@@ -7,7 +7,7 @@ from adafruit_mcp3xxx.analog_in import AnalogIn # handles the sensor
 
 VALUE_RANGE_SIZE = 100 # number of values in our converted moisture range
 
-class MoistureSensor:
+class McpSensor:
     def __init__(self, mcp, mcp_pin, iniFileName, iniSectionName):
         try:
             # set up MoistureSensor object

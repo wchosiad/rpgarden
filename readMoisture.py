@@ -1,5 +1,5 @@
-from MoistureSensor import MoistureSensor 
 from time import sleep
+from McpSensor import McpSensor 
 
 # These are all Adafruit modules that come with CircuitPython
 # pip3 install adafruit-circuitpython-mcp3xxx
@@ -20,11 +20,12 @@ spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
 cs = digitalio.DigitalInOut(CHIP_SELECT_PIN)
 mcp = MCP.MCP3008(spi, cs)
 
-sensor = MoistureSensor(mcp, MOISTURE_MCP_PIN, RPGARDEN_CONFIG_FILE, "moisture_sensor_1")
+sensor = McpSensor(mcp, MOISTURE_MCP_PIN, RPGARDEN_CONFIG_FILE, "moisture_sensor_1")
 
 try:
     while True:
-        print(sensor.read_raw(), "    %.2f" % sensor.read())
+        val = sensor.read_raw()
+        print(val, "    %.2f" % sensor.convert(val))
         sleep(1)
 except KeyboardInterrupt:    
     pass  # Don't do anything special if user typed Ctrl-C
