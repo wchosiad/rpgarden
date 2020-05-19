@@ -10,7 +10,6 @@ import adafruit_mcp3xxx.mcp3008 as MCP  # handles the MCP3008
 
 # Here are the constants you can change to match your wiring
 CHIP_SELECT_PIN = board.D5 #GPIO Pin for MCP's Chip Select
-MOISTURE_MCP_PIN = MCP.P0  #MCP sensor input pin
 
 # This is the path to the configuration file
 RPGARDEN_CONFIG_FILE = "/home/pi/code/rpgarden/rpgarden.ini"
@@ -20,7 +19,7 @@ spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
 cs = digitalio.DigitalInOut(CHIP_SELECT_PIN)
 mcp = MCP.MCP3008(spi, cs)
 
-sensor = McpSensor(mcp, MOISTURE_MCP_PIN, RPGARDEN_CONFIG_FILE, "moisture_sensor_1")
+sensor = McpSensor(mcp, RPGARDEN_CONFIG_FILE, "moisture_sensor_1")
 
 try:
     while True:

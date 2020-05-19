@@ -8,19 +8,17 @@ from adafruit_mcp3xxx.analog_in import AnalogIn # handles the sensor
 VALUE_RANGE_SIZE = 100 # number of values in our converted moisture range
 
 class McpSensor:
-    def __init__(self, mcp, mcp_pin, iniFileName, iniSectionName):
+    def __init__(self, mcp, iniFileName, iniSectionName):
         try:
-            # set up MoistureSensor object
-            self.sensor = AnalogIn(mcp, mcp_pin)
-
             # set up default values
             self.minVal = 35000
             self.maxVal = 35001
+            self.mcp_pin = 0
 
             # set ini file values
             self.iniFileName = iniFileName
             self.iniSectionName = iniSectionName
-            self.moistureSection = None
+            self.sensorSection = None
             self.rpgConfig = None
 
             # Read in configuration values, if they exist
@@ -31,18 +29,23 @@ class McpSensor:
 
             if self.iniSectionName in self.rpgConfig:
                 # Read values from ini file
-                self.moistureSection = self.rpgConfig[self.iniSectionName]
-                self.maxVal = int(self.moistureSection['top'])
-                self.minVal = int(self.moistureSection['bottom'])
+                self.sensorSection = self.rpgConfig[self.iniSectionName]
+                self.maxVal = int(self.sensorSection['top'])
+                self.minVal = int(self.sensorSection['bottom'])
+                self.mcp_pin = int(self.sensorSection['mcp_channel'])
             else:
                 # Write values to ini file
                 self.rpgConfig.add_section(self.iniSectionName)
-                self.moistureSection = self.rpgConfig[self.iniSectionName]
-                self.moistureSection["top"] = str(self.maxVal)
-                self.moistureSection["bottom"] = str(self.minVal)
+                self.sensorSection = self.rpgConfig[self.iniSectionName]
+                self.sensorSection["top"] = str(self.maxVal)
+                self.sensorSection["bottom"] = str(self.minVal)
+                self.sensorSection['mcp_channel'] = str(self.mcp_pin)
                 with open(self.iniFileName, 'w') as configfile:
                     self.rpgConfig.write(configfile)
             
+            # set up MoistureSensor object
+            self.sensor = AnalogIn(mcp, self.mcp_pin)
+
             # Factor for converting readings to a 0-100 range
             self.factor = float(self.maxVal - self.minVal) / float(VALUE_RANGE_SIZE)
 
@@ -61,12 +64,12 @@ class McpSensor:
         if (val > self.maxVal):
             foundNewBounds = True
             self.maxVal = val
-            self.moistureSection['top'] = str(self.maxVal)
+            self.sensorSection['top'] = str(self.maxVal)
 
         if (val < self.minVal):
             foundNewBounds = True
             self.minVal = val
-            self.moistureSection['bottom'] = str(self.minVal)
+            self.sensorSection['bottom'] = str(self.minVal)
 
         if (foundNewBounds):  # Update the ini file
             self.factor = float(self.maxVal - self.minVal) / float(VALUE_RANGE_SIZE)
