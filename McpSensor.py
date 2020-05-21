@@ -47,7 +47,7 @@ class McpSensor:
             self.sensor = AnalogIn(mcp, self.mcp_pin)
 
             # Factor for converting readings to a 0-100 range
-            self.factor = float(self.maxVal - self.minVal) / float(VALUE_RANGE_SIZE)
+            self.factor = float(VALUE_RANGE_SIZE) / float(self.maxVal - self.minVal)
 
         except Exception as ex:
             # Handle other exceptions
@@ -72,7 +72,7 @@ class McpSensor:
             self.sensorSection['bottom'] = str(self.minVal)
 
         if (foundNewBounds):  # Update the ini file
-            self.factor = float(self.maxVal - self.minVal) / float(VALUE_RANGE_SIZE)
+            self.factor = float(VALUE_RANGE_SIZE) / float(self.maxVal - self.minVal)
             with open(self.iniFileName, 'w') as configfile:
                 self.rpgConfig.write(configfile)
 
@@ -83,5 +83,6 @@ class McpSensor:
         return self.convert(self.read_raw())
 
     # converts raw values to something from 0 to VALUE_RANGE_SIZE
+
     def convert(self, val):
-        return float(val - self.minVal) / self.factor
+        return  (float(VALUE_RANGE_SIZE) - (float(val - self.minVal) * self.factor))
