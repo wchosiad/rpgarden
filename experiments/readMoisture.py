@@ -19,13 +19,19 @@ spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
 cs = digitalio.DigitalInOut(CHIP_SELECT_PIN)
 mcp = MCP.MCP3008(spi, cs)
 
-sensor = McpSensor(mcp, RPGARDEN_CONFIG_FILE, "moisture_sensor_1")
+moistureSensor = McpSensor(mcp, RPGARDEN_CONFIG_FILE, "moisture_sensor_1")
+photoSensor =  McpSensor(mcp, RPGARDEN_CONFIG_FILE, "photo_sensor_1")
 
 try:
     while True:
-        val = sensor.read_raw()
-        print(val, "    %.2f" % sensor.convert(val))
+        val = moistureSensor.read_raw()
+        print("Moisture:", val, "    %.2f" % moistureSensor.convert(val))
+
+        val = photoSensor.read_raw()
+        print("Photo:", val, "    %.2f" % photoSensor.convert(val))
+
         sleep(1)
+        print("")
 except KeyboardInterrupt:    
     pass  # Don't do anything special if user typed Ctrl-C
 

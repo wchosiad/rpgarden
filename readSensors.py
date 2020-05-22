@@ -1,5 +1,6 @@
 from time import sleep
 from os import path
+import configparser
 from McpSensor import McpSensor 
 import RPi.GPIO as GPIO
 from dhtxx import DHTXX
@@ -15,6 +16,8 @@ import adafruit_mcp3xxx.mcp3008 as MCP  # handles the MCP3008
 
 # Here are the constants you can change to match your wiring
 CHIP_SELECT_PIN = board.D5 #GPIO Pin for MCP's Chip Select
+
+#Config and Log files
 RPGARDEN_CONFIG_FILE = "/home/pi/code/rpgarden/rpgarden.ini"
 RPGARDEN_LOG_FILE = "/home/pi/code/rpgarden/logs/datalog.csv"
 
@@ -23,6 +26,7 @@ spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
 cs = digitalio.DigitalInOut(CHIP_SELECT_PIN)
 mcp = MCP.MCP3008(spi, cs)
 moistureSensor = McpSensor(mcp, RPGARDEN_CONFIG_FILE, "moisture_sensor_1")
+photoSensor = McpSensor(mcp, RPGARDEN_CONFIG_FILE, "photo_sensor_1")
 
 # Set up for the DHT sensor
 GPIO.setmode(GPIO.BCM)
@@ -31,7 +35,7 @@ dhtSensor = DHTXX(pin=16, sensorType=DHTXX.DHT22, scale=DHTXX.FAHRENHEIT)
 # Check if the log file exists, if not, initialize it with a header row
 if not path.exists(RPGARDEN_LOG_FILE):
     with open(RPGARDEN_LOG_FILE, mode='w') as logFile:
-        fieldnames = ['log_date', 'temperature', 'humidity','soil_moisture']
+        fieldnames = ['log_date', 'temperature', 'humidity','soil_moisture','light']
         logFile_writer = csv.writer(logFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
         logFile_writer.writerow(fieldnames)
 
@@ -39,6 +43,9 @@ if not path.exists(RPGARDEN_LOG_FILE):
 try:
     moistureVal = moistureSensor.read()
     print( "Soil Moisture: %.2f" % moistureVal)
+
+    photoVal = photoSensor.read()
+    print( "Light Sensor: %.2f" % photoVal)
 
     dhtVal = dhtSensor.read_and_retry()
     if dhtVal.is_valid():
@@ -48,12 +55,12 @@ try:
         print("Error: %d" % resdhtValult.error_code)
 
     with open(RPGARDEN_LOG_FILE, mode='a') as logFile:
-        fieldnames = ['log_date', 'temperature', 'humidity','soil_moisture']
+        fieldnames = ['log_date', 'temperature', 'humidity','soil_moisture','light']
         logFile_writer = csv.writer(logFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-        logFile_writer.writerow([datetime.datetime.now(), dhtVal.temperature, dhtVal.humidity, moistureVal])
+        logFile_writer.writerow([datetime.datetime.now(), dhtVal.temperature, dhtVal.humidity, moistureVal, photoVal])
     
     print("\n")
-    sleep(2)
+
 except KeyboardInterrupt:    
     pass  # Don't do anything special if user typed Ctrl-C
 

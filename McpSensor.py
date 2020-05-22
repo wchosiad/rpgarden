@@ -33,6 +33,7 @@ class McpSensor:
                 self.maxVal = int(self.sensorSection['top'])
                 self.minVal = int(self.sensorSection['bottom'])
                 self.mcp_pin = int(self.sensorSection['mcp_channel'])
+                self.reverse = self.rpgConfig.getboolean(iniSectionName, 'reverse')
             else:
                 # Write values to ini file
                 self.rpgConfig.add_section(self.iniSectionName)
@@ -40,6 +41,8 @@ class McpSensor:
                 self.sensorSection["top"] = str(self.maxVal)
                 self.sensorSection["bottom"] = str(self.minVal)
                 self.sensorSection['mcp_channel'] = str(self.mcp_pin)
+                self.sensorSection['reverse'] = "False"
+
                 with open(self.iniFileName, 'w') as configfile:
                     self.rpgConfig.write(configfile)
             
@@ -85,4 +88,8 @@ class McpSensor:
     # converts raw values to something from 0 to VALUE_RANGE_SIZE
 
     def convert(self, val):
-        return  (float(VALUE_RANGE_SIZE) - (float(val - self.minVal) * self.factor))
+        newVal = float(val - self.minVal) * self.factor
+        if self.reverse:
+            newVal =  float(VALUE_RANGE_SIZE) - (newVal)
+        
+        return newVal
