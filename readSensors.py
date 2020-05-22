@@ -6,6 +6,7 @@ import RPi.GPIO as GPIO
 from dhtxx import DHTXX
 import csv
 import datetime
+import socket
 
 # These are all Adafruit modules that come with CircuitPython
 # pip3 install adafruit-circuitpython-mcp3xxx
@@ -25,8 +26,8 @@ RPGARDEN_LOG_FILE = "/home/pi/code/rpgarden/logs/datalog.csv"
 spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
 cs = digitalio.DigitalInOut(CHIP_SELECT_PIN)
 mcp = MCP.MCP3008(spi, cs)
-moistureSensor = McpSensor(mcp, RPGARDEN_CONFIG_FILE, "moisture_sensor_1")
-photoSensor = McpSensor(mcp, RPGARDEN_CONFIG_FILE, "photo_sensor_1")
+moistureSensor = McpSensor(mcp, RPGARDEN_CONFIG_FILE, "moisture_sensor_1_" + socket.gethostname())
+photoSensor = McpSensor(mcp, RPGARDEN_CONFIG_FILE, "photo_sensor_1_" + socket.gethostname())
 
 # Set up for the DHT sensor
 GPIO.setmode(GPIO.BCM)
