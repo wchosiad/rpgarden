@@ -19,15 +19,14 @@ import adafruit_mcp3xxx.mcp3008 as MCP  # handles the MCP3008
 CHIP_SELECT_PIN = board.D5 #GPIO Pin for MCP's Chip Select
 
 #Config and Log files
-RPGARDEN_CONFIG_FILE = "/home/pi/code/rpgarden/rpgarden.ini"
 RPGARDEN_LOG_FILE = "/home/pi/code/rpgarden/logs/datalog.csv"
 
 # Set up the SPI Bus, The chip select, and the MCP
 spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
 cs = digitalio.DigitalInOut(CHIP_SELECT_PIN)
 mcp = MCP.MCP3008(spi, cs)
-moistureSensor = McpSensor(mcp, RPGARDEN_CONFIG_FILE, "moisture_sensor_1_" + socket.gethostname())
-photoSensor = McpSensor(mcp, RPGARDEN_CONFIG_FILE, "photo_sensor_1_" + socket.gethostname())
+moistureSensor = McpSensor(mcp, "moisture_sensor_1_" + socket.gethostname())
+photoSensor = McpSensor(mcp, "photo_sensor_1_" + socket.gethostname())
 
 # Set up for the DHT sensor
 GPIO.setmode(GPIO.BCM)

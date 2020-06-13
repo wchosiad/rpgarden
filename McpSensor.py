@@ -1,5 +1,6 @@
 from os import path
 import configparser
+from SensorConfig import McpSensorConfig
 
 # These are all Adafruit modules that come with CircuitPython
 # pip3 install adafruit-circuitpython-mcp3xxx
@@ -8,49 +9,16 @@ from adafruit_mcp3xxx.analog_in import AnalogIn # handles the sensor
 VALUE_RANGE_SIZE = 100 # number of values in our converted moisture range
 
 class McpSensor:
-    def __init__(self, mcp, iniFileName, iniSectionName):
+    def __init__(self, mcp, iniSectionName):
         try:
-            # set up default values
-            self.minVal = 35000
-            self.maxVal = 35001
-            self.mcp_pin = 0
+            cfg = McpSensorConfig(iniSectionName)
+            self.cfg = cfg
 
-            # set ini file values
-            self.iniFileName = iniFileName
-            self.iniSectionName = iniSectionName
-            self.sensorSection = None
-            self.rpgConfig = None
-
-            # Read in configuration values, if they exist
-            # If not, add them to the config file
-            self.rpgConfig = configparser.ConfigParser()  # Create ConfigParser object
-            if path.exists(self.iniFileName):             # Check to see if ini file exists
-                self.rpgConfig.read(self.iniFileName)     # Load its data from the file
-
-            if self.iniSectionName in self.rpgConfig:
-                # Read values from ini file
-                self.sensorSection = self.rpgConfig[self.iniSectionName]
-                self.maxVal = int(self.sensorSection['top'])
-                self.minVal = int(self.sensorSection['bottom'])
-                self.mcp_pin = int(self.sensorSection['mcp_channel'])
-                self.reverse = self.rpgConfig.getboolean(iniSectionName, 'reverse')
-            else:
-                # Write values to ini file
-                self.rpgConfig.add_section(self.iniSectionName)
-                self.sensorSection = self.rpgConfig[self.iniSectionName]
-                self.sensorSection["top"] = str(self.maxVal)
-                self.sensorSection["bottom"] = str(self.minVal)
-                self.sensorSection['mcp_channel'] = str(self.mcp_pin)
-                self.sensorSection['reverse'] = "False"
-
-                with open(self.iniFileName, 'w') as configfile:
-                    self.rpgConfig.write(configfile)
-            
             # set up MoistureSensor object
-            self.sensor = AnalogIn(mcp, self.mcp_pin)
+            self.sensor = AnalogIn(mcp, cfg.mcp_pin)
 
             # Factor for converting readings to a 0-100 range
-            self.factor = float(VALUE_RANGE_SIZE) / float(self.maxVal - self.minVal)
+            self.factor = float(VALUE_RANGE_SIZE) / float(cfg.maxVal - cfg.minVal)
 
         except Exception as ex:
             # Handle other exceptions
@@ -64,20 +32,17 @@ class McpSensor:
         foundNewBounds = False
         val = self.sensor.value
 
-        if (val > self.maxVal):
-            foundNewBounds = True
-            self.maxVal = val
-            self.sensorSection['top'] = str(self.maxVal)
+        if (val > self.cfg.maxVal):         # Update the bounds in the ini file if it's outside
+            foundNewBounds = True           # of the values seen so far
+            self.cfg.set('top', val)
 
-        if (val < self.minVal):
+        if (val < self.cfg.minVal):
             foundNewBounds = True
-            self.minVal = val
-            self.sensorSection['bottom'] = str(self.minVal)
-
-        if (foundNewBounds):  # Update the ini file
-            self.factor = float(VALUE_RANGE_SIZE) / float(self.maxVal - self.minVal)
-            with open(self.iniFileName, 'w') as configfile:
-                self.rpgConfig.write(configfile)
+            self.cfg.set('bottom', val)
+        
+        if (foundNewBounds):
+            # recalculate factor for converting readings to a 0-100 range
+            self.factor = float(VALUE_RANGE_SIZE) / float(self.cfg.maxVal - self.cfg.minVal)
 
         return val
     
@@ -86,10 +51,9 @@ class McpSensor:
         return self.convert(self.read_raw())
 
     # converts raw values to something from 0 to VALUE_RANGE_SIZE
-
     def convert(self, val):
-        newVal = float(val - self.minVal) * self.factor
-        if self.reverse:
+        newVal = float(val - self.cfg.minVal) * self.factor
+        if self.cfg.reverse:
             newVal =  float(VALUE_RANGE_SIZE) - (newVal)
         
         return newVal
