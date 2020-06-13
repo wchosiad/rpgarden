@@ -16,7 +16,7 @@ import board      # Raspberry Pi pin name constants, etc.
 import adafruit_mcp3xxx.mcp3008 as MCP  # handles the MCP3008
 
 # Here are the constants you can change to match your wiring
-CHIP_SELECT_PIN = board.D5 #GPIO Pin for MCP's Chip Select
+CHIP_SELECT_PIN = board.D6     # It may be that board.D5 is blown on my Pi - it doesn't seem to work with this any more
 
 #Config and Log files
 RPGARDEN_LOG_FILE = "/home/pi/code/rpgarden/logs/datalog.csv"
