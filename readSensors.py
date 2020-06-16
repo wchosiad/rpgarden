@@ -1,5 +1,5 @@
 from time import sleep
-from os import path
+import os
 import configparser
 from McpSensor import McpSensor 
 import RPi.GPIO as GPIO
@@ -19,7 +19,9 @@ import adafruit_mcp3xxx.mcp3008 as MCP  # handles the MCP3008
 CHIP_SELECT_PIN = board.D6     # It may be that board.D5 is blown on my Pi - it doesn't seem to work with this any more
 
 #Config and Log files
-RPGARDEN_LOG_FILE = "/home/pi/code/rpgarden/logs/datalog.csv"
+RPGARDEN_LOG_DIR = "/home/pi/code/rpgarden/logs"
+RPGARDEN_LOG_FILE = RPGARDEN_LOG_DIR + "/datalog.csv"
+print("Log FIle: " + RPGARDEN_LOG_FILE)
 
 # Set up the SPI Bus, The chip select, and the MCP
 spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
@@ -32,8 +34,11 @@ photoSensor = McpSensor(mcp, "photo_sensor_1_" + socket.gethostname())
 GPIO.setmode(GPIO.BCM)
 dhtSensor = DHTXX(pin=16, sensorType=DHTXX.DHT22, scale=DHTXX.FAHRENHEIT)
 
+if not os.path.exists(RPGARDEN_LOG_DIR):
+    os.makedirs(RPGARDEN_LOG_DIR)
+
 # Check if the log file exists, if not, initialize it with a header row
-if not path.exists(RPGARDEN_LOG_FILE):
+if not os.path.exists(RPGARDEN_LOG_FILE):
     with open(RPGARDEN_LOG_FILE, mode='w') as logFile:
         fieldnames = ['log_date', 'temperature', 'humidity','soil_moisture','light']
         logFile_writer = csv.writer(logFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
