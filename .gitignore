@@ -7,7 +7,10 @@ __pycache__/
 *.so
 
 # log files
-logs/
+logs/*
+
+# vsCode Files
+.vscode/
 
 # Distribution / packaging
 .Python
