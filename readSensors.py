@@ -1,12 +1,9 @@
-from time import sleep
 import os
-import configparser
-from McpSensor import McpSensor 
+import Sensor
+from Config import RpgConfig
 import RPi.GPIO as GPIO
-from dhtxx import DHTXX
 import csv
-import datetime
-import socket
+import socket     # Used to get host name
 
 # These are all Adafruit modules that come with CircuitPython
 # pip3 install adafruit-circuitpython-mcp3xxx
@@ -15,57 +12,74 @@ import digitalio  # handles IO on the GPIO pins
 import board      # Raspberry Pi pin name constants, etc.
 import adafruit_mcp3xxx.mcp3008 as MCP  # handles the MCP3008
 
-# Here are the constants you can change to match your wiring
-CHIP_SELECT_PIN = board.D6     # It may be that board.D5 is blown on my Pi - it doesn't seem to work with this any more
-
-#Config and Log files
-RPGARDEN_LOG_DIR = "/home/pi/code/rpgarden/logs"
-RPGARDEN_LOG_FILE = RPGARDEN_LOG_DIR + "/datalog.csv"
-print("Log FIle: " + RPGARDEN_LOG_FILE)
-
-# Set up the SPI Bus, The chip select, and the MCP
-spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
-cs = digitalio.DigitalInOut(CHIP_SELECT_PIN)
-mcp = MCP.MCP3008(spi, cs)
-moistureSensor = McpSensor(mcp, "moisture_sensor_1_" + socket.gethostname())
-photoSensor = McpSensor(mcp, "photo_sensor_1_" + socket.gethostname())
-
-# Set up for the DHT sensor
-GPIO.setmode(GPIO.BCM)
-dhtSensor = DHTXX(pin=16, sensorType=DHTXX.DHT22, scale=DHTXX.FAHRENHEIT)
-
-if not os.path.exists(RPGARDEN_LOG_DIR):
-    os.makedirs(RPGARDEN_LOG_DIR)
-
-# Check if the log file exists, if not, initialize it with a header row
-if not os.path.exists(RPGARDEN_LOG_FILE):
-    with open(RPGARDEN_LOG_FILE, mode='w') as logFile:
-        fieldnames = ['log_date', 'temperature', 'humidity','soil_moisture','light']
-        logFile_writer = csv.writer(logFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-        logFile_writer.writerow(fieldnames)
-
-# just read the sensors once and log it.
 try:
-    moistureVal = moistureSensor.read()
-    print( "Soil Moisture: %.2f" % moistureVal)
+    # Read sensor info from the .ini file
+    # That file contains the constants you can change to match your wiring
+    rpgConfig = RpgConfig()
 
-    photoVal = photoSensor.read()
-    print( "Light Sensor: %.2f" % photoVal)
+    # Set up the GPIO Pin Mode
+    GPIO.setmode(GPIO.BCM)
 
-    dhtVal = dhtSensor.read_and_retry()
-    if dhtVal.is_valid():
-        print("Temperature: %-3.1f F" % dhtVal.temperature)
-        print("Humidity: %-3.1f %%" % dhtVal.humidity)
-    else:
-        print("Error: %d" % resdhtValult.error_code)
+    # MCP_3008 Chip Select Pin
+    CHIP_SELECT_PIN = eval(rpgConfig.get("mcp_chip_select"))
+
+    # Set up the SPI Bus, The chip select, and the MCP
+    spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
+    cs = digitalio.DigitalInOut(CHIP_SELECT_PIN)
+    mcp = MCP.MCP3008(spi, cs)
+
+    # Log directory and file path
+    RPGARDEN_LOG_DIR = rpgConfig.get("log_dir")
+    RPGARDEN_LOG_FILE = rpgConfig.get("log_file")
+
+    # Set up the sensors. Store them in the sensors list
+    sensors = []
+    sensorList = rpgConfig.get("sensor_list").split(',')
+    for sensorSection in sensorList:
+        sensorName = sensorSection + "_" + socket.gethostname()
+        sensortype = rpgConfig.getSensorType(sensorName)
+
+        if sensortype == "clock":
+            sensors.append(Sensor.ClockSensor(sensorName))
+
+        if sensortype == "dht":
+            sensors.append(Sensor.DhtSensor(sensorName))
+
+        if sensortype == "photo" or sensortype == "moisture":
+            sensors.append(Sensor.McpSensor(sensorName, mcp))
+
+    sensors.sort(key=lambda x: x.cfg.sort, reverse=False)  # Sort sensors by sort order from config file
+
+    # Check if the path to the log file exists, if not, create it
+    if not os.path.exists(RPGARDEN_LOG_DIR):
+        os.makedirs(RPGARDEN_LOG_DIR)
+
+    # Check if the log file exists, if not, initialize it with a header row
+    if not os.path.exists(RPGARDEN_LOG_FILE):
+        fieldnames = []
+        for sensor in sensors:
+            fieldnames.extend(sensor.cfg.field_name.split("~"))
+        
+        with open(RPGARDEN_LOG_FILE, mode='w') as logFile:
+            logFile_writer = csv.writer(logFile, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
+            logFile_writer.writerow(fieldnames)
+
+    fieldVals = []
+    for sensor in sensors:
+        val = sensor.read()
+        if (sensor.cfg.type != 'dht'):
+            print(sensor.cfg.description + ": " + val)
+            fieldVals.append(val)
+        else:
+            print("Temperature: " + sensor.temperature)
+            print("Humidity: " + sensor.humidity)
+            fieldVals.append(sensor.temperature)
+            fieldVals.append(sensor.humidity)
 
     with open(RPGARDEN_LOG_FILE, mode='a') as logFile:
-        fieldnames = ['log_date', 'temperature', 'humidity','soil_moisture','light']
-        logFile_writer = csv.writer(logFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-        logFile_writer.writerow([datetime.datetime.now(), dhtVal.temperature, dhtVal.humidity, moistureVal, photoVal])
+        logFile_writer = csv.writer(logFile, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
+        logFile_writer.writerow(fieldVals)
     
-    print("\n")
-
 except KeyboardInterrupt:    
     pass  # Don't do anything special if user typed Ctrl-C
 
