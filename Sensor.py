@@ -22,8 +22,6 @@ class ClockSensor(GenericSensor):
         try:
             cfg = Config.ClockSensorConfig(iniSectionName)
             self.cfg = cfg
-            #self.sort = cfg.sort
-            #self.format = cfg.format
 
         except Exception as ex:
             # Handle other exceptions
@@ -44,7 +42,6 @@ class DhtSensor(GenericSensor):
         try:
             cfg = Config.DhtSensorConfig(iniSectionName)
             self.cfg = cfg
-            #self.sort = cfg.sort
             self.temperature = None
             self.humidity = None
             self.error = None
@@ -85,7 +82,6 @@ class McpSensor(GenericSensor):
     def __init__(self, iniSectionName, mcp):
         try:
             cfg = Config.McpSensorConfig(iniSectionName)
-            #self.sort = cfg.sort
             self.cfg = cfg
 
             # set up MoistureSensor object
