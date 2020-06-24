@@ -1,5 +1,3 @@
-import sys
-
 import Config  # Our .ini file configuration class
 
 # The clock "sensor" needs this
@@ -36,7 +34,7 @@ class ClockSensor(GenericSensor):
         return datetime.datetime.now()
     
     def read(self):
-        return datetime.datetime.now().strftime(self.clock_format)
+        return datetime.datetime.now().strftime(self.format)
 
 # DhtSensor: A digital sensor that returns the current temperature and humidity
 class DhtSensor(GenericSensor):
@@ -86,7 +84,7 @@ class McpSensor(GenericSensor):
             cfg = Config.McpSensorConfig(iniSectionName)
             self.cfg = cfg
 
-            # set up MoistureSensor or Photoresistor object
+            # set up MoistureSensor object
             self.sensor = AnalogIn(mcp, cfg.mcp_pin)
 
             # Factor for converting readings to a 0-100 range

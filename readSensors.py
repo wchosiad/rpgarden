@@ -4,6 +4,10 @@ from Config import RpgConfig
 import RPi.GPIO as GPIO
 import csv
 import socket     # Used to get host name
+import traceback
+import MySQLdb    # pip3 install mysqlclient
+                  # sudo apt-get install python-dev default-libmysqlclient-dev
+                  #
 
 # These are all Adafruit modules that come with CircuitPython
 # pip3 install adafruit-circuitpython-mcp3xxx
@@ -34,7 +38,7 @@ try:
 
     # Set up the sensors. Store them in the sensors list
     sensors = []
-    sensorList = rpgConfig.get("sensor_list").split(',')
+    sensorList = rpgConfig.get("sensor_list" + "_" + socket.gethostname()).split(',')
     for sensorSection in sensorList:
         sensorName = sensorSection + "_" + socket.gethostname()
         sensortype = rpgConfig.getSensorType(sensorName)
@@ -50,6 +54,11 @@ try:
 
     sensors.sort(key=lambda x: x.cfg.sort, reverse=False)  # Sort sensors by sort order from config file
 
+
+    # ==================================================================================================
+    # Code for saving the data to a tab-delimited file
+    # ==================================================================================================
+    
     # Check if the path to the log file exists, if not, create it
     if not os.path.exists(RPGARDEN_LOG_DIR):
         os.makedirs(RPGARDEN_LOG_DIR)
@@ -64,27 +73,75 @@ try:
             logFile_writer = csv.writer(logFile, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
             logFile_writer.writerow(fieldnames)
 
+    # Collect the data
     fieldVals = []
+    fieldNames = []
+    fieldFormats = []
     for sensor in sensors:
         val = sensor.read()
-        if (sensor.cfg.type != 'dht'):
-            print(sensor.cfg.description + ": " + val)
+        if (sensor.type != 'dht'):
+            print(sensor.description + ": " + val)
             fieldVals.append(val)
+            fieldNames.append(sensor.field_name)
+            fieldFormats.append(sensor.format)
         else:
             print("Temperature: " + sensor.temperature)
-            print("Humidity: " + sensor.humidity)
             fieldVals.append(sensor.temperature)
+            fieldNames.append("temperature")
+            fieldFormats.append("%s")
+
+            print("Humidity: " + sensor.humidity)
             fieldVals.append(sensor.humidity)
+            fieldNames.append("humidity")
+            fieldFormats.append("%s")
 
     with open(RPGARDEN_LOG_FILE, mode='a') as logFile:
         logFile_writer = csv.writer(logFile, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
         logFile_writer.writerow(fieldVals)
+
+
+    # ==================================================================================================
+    # Code for saving the data to a remote MySQL database
+    # ==================================================================================================
+    print("\nCollecting data to save to MySQL...")
+    fieldNames.append("pk")
+    fieldVals.append(None)
+    fieldFormats.append("%s")
     
+    fieldNames.append("host")
+    fieldVals.append(socket.gethostname())
+    fieldFormats.append("%s")
+
+    strFieldNames = ','.join(fieldNames) 
+    strFieldFormats = ','.join(fieldFormats) 
+    sql = "INSERT INTO rpgarden (" + strFieldNames + ") VALUES (" +  strFieldFormats + ")"
+
+    print("Saving data to MySQL...")
+    # Open database connection
+    db = MySQLdb.connect(rpgConfig.private['mysql_host'], rpgConfig.private['mysql_user'], rpgConfig.private['mysql_password'], rpgConfig.private['mysql_db'])
+    cursor = db.cursor()
+    
+    try:
+        # Execute the SQL command
+        cursor.execute(sql, fieldVals)
+        # Commit your changes in the database
+        db.commit()
+        print("Data Saved")
+    except:
+        # Rollback in case there is any error
+        print(traceback.format_exc())
+        print("!!! Failed to save MySQL data!")
+        db.rollback()
+
+    # disconnect from server
+    db.close()
+
 except KeyboardInterrupt:    
     pass  # Don't do anything special if user typed Ctrl-C
 
 except Exception as ex:
     # Handle other exceptions
+    print(traceback.format_exc())
     print(type(ex))
     print(ex.args)
     print(ex)
