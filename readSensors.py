@@ -126,6 +126,7 @@ try:
     
     try:
         # Execute the SQL command
+        #cursor.execute("SET time_zone = '" + rpgConfig.private['mysql_timezone'] + "';")
         cursor.execute(sql, fieldVals)
         # Commit your changes in the database
         db.commit()
