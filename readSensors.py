@@ -77,6 +77,7 @@ try:
     fieldVals = []
     fieldNames = []
     fieldFormats = []
+    strCurrentTime = None
     for sensor in sensors:
         val = sensor.read()
         if (sensor.type != 'dht'):
@@ -84,6 +85,8 @@ try:
             fieldVals.append(val)
             fieldNames.append(sensor.field_name)
             fieldFormats.append(sensor.format)
+            if sensor.type == 'clock':
+                strCurrentTime = val
         else:
             print("Temperature: " + sensor.temperature)
             fieldVals.append(sensor.temperature)
@@ -101,7 +104,7 @@ try:
 
 
     # ==================================================================================================
-    # Code for saving the data to a remote MySQL database
+    # Code for saving the data to a remote MySQL database (wide table)
     # ==================================================================================================
     print("\nCollecting data to save to MySQL...")
     fieldNames.append("pk")
@@ -116,7 +119,7 @@ try:
     strFieldFormats = ','.join(fieldFormats) 
     sql = "INSERT INTO rpgarden (" + strFieldNames + ") VALUES (" +  strFieldFormats + ")"
 
-    print("Saving data to MySQL...")
+    print("Saving data to MySQL (wide)...")
     # Open database connection
     db = MySQLdb.connect(rpgConfig.private['mysql_host'], rpgConfig.private['mysql_user'], rpgConfig.private['mysql_password'], rpgConfig.private['mysql_db'])
     cursor = db.cursor()
@@ -133,6 +136,51 @@ try:
         print("!!! Failed to save MySQL data!")
         db.rollback()
 
+    # disconnect from server
+    db.close()
+
+
+    # ==================================================================================================
+    # Code for saving the data to a remote MySQL database (narrow table)
+    # ==================================================================================================
+    print("Saving data to MySQL (narrow)...")
+    # Open database connection
+    db = MySQLdb.connect(rpgConfig.private['mysql_host'], rpgConfig.private['mysql_user'], rpgConfig.private['mysql_password'], rpgConfig.private['mysql_db'])
+    cursor = db.cursor()
+    sql = "INSERT INTO rpgarden2 (pk, host, reading_time, sensor_name, sensor_value) VALUES (NULL,  %s, %s, %s, %s)"
+
+    for sensor in sensors:
+        val = sensor.read()
+        if (sensor.type == 'dht'):
+            try:
+                fieldVals = (socket.gethostname(), strCurrentTime, "temperature", sensor.temperature)
+                cursor.execute(sql, fieldVals)
+                db.commit()
+                print("Data Saved for temperature")
+
+                fieldVals = (socket.gethostname(), strCurrentTime, "humidity", sensor.humidity)
+                cursor.execute(sql, fieldVals)
+                db.commit()
+                print("Data Saved for humidity")
+            except:
+                # Rollback in case there is any error
+                print(traceback.format_exc())
+                print("!!! Failed to save MySQL data! Sensor: " + sensor.field_name)
+                db.rollback()
+        elif sensor.type != 'clock':
+            try:
+                fieldVals = (socket.gethostname(), strCurrentTime, sensor.field_name, val)
+                # Execute the SQL command
+                cursor.execute(sql, fieldVals)
+                # Commit your changes in the database
+                db.commit()
+                print("Data Saved for " + sensor.field_name)
+            except:
+                # Rollback in case there is any error
+                print(traceback.format_exc())
+                print("!!! Failed to save MySQL data! Sensor: " + sensor.field_name)
+                db.rollback()
+        
     # disconnect from server
     db.close()
 
