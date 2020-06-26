@@ -52,51 +52,50 @@ try:
         if sensortype == "photo" or sensortype == "moisture":
             sensors.append(Sensor.McpSensor(sensorName, mcp))
 
-    sensors.sort(key=lambda x: x.cfg.sort, reverse=False)  # Sort sensors by sort order from config file
+    # ==================================================================================================
+    # Code for reading and logging the data
+    # ==================================================================================================
 
+    # Collect the data
+    print("\Collecting data...")
+    readings = []
+    readingsWithClock = []
+    clockReading = None # The clock sensor is special because everyone uses it
+    for sensor in sensors:
+        if sensor.type == 'clock':
+            clockReading = (sensor.readObj())[0]
+            readingsWithClock.extend([clockReading])
+        else:
+            readings.extend(sensor.readObj())
+            readingsWithClock.extend(sensor.readObj())
+
+    # Sort readings
+    readings.sort(key=lambda x: x["sort"], reverse=False)  
+    readingsWithClock.sort(key=lambda x: x["sort"], reverse=False)  
+    print("\Data collected.")
 
     # ==================================================================================================
     # Code for saving the data to a tab-delimited file
     # ==================================================================================================
-    
+    print("\Saving Data to file.")
     # Check if the path to the log file exists, if not, create it
     if not os.path.exists(RPGARDEN_LOG_DIR):
         os.makedirs(RPGARDEN_LOG_DIR)
 
     # Check if the log file exists, if not, initialize it with a header row
     if not os.path.exists(RPGARDEN_LOG_FILE):
-        fieldnames = []
-        for sensor in sensors:
-            fieldnames.extend(sensor.cfg.field_name.split("~"))
+        fieldNames = []
+        for reading in readingsWithClock:
+            fieldNames.append(reading.field_name)
         
         with open(RPGARDEN_LOG_FILE, mode='w') as logFile:
             logFile_writer = csv.writer(logFile, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
-            logFile_writer.writerow(fieldnames)
+            logFile_writer.writerow(fieldNames)
 
-    # Collect the data
+    # write out the values
     fieldVals = []
-    fieldNames = []
-    fieldFormats = []
-    strCurrentTime = None
-    for sensor in sensors:
-        val = sensor.read()
-        if (sensor.type != 'dht'):
-            print(sensor.description + ": " + val)
-            fieldVals.append(val)
-            fieldNames.append(sensor.field_name)
-            fieldFormats.append(sensor.format)
-            if sensor.type == 'clock':
-                strCurrentTime = val
-        else:
-            print("Temperature: " + sensor.temperature)
-            fieldVals.append(sensor.temperature)
-            fieldNames.append("temperature")
-            fieldFormats.append("%s")
-
-            print("Humidity: " + sensor.humidity)
-            fieldVals.append(sensor.humidity)
-            fieldNames.append("humidity")
-            fieldFormats.append("%s")
+    for reading in readingsWithClock:
+        fieldVals.append(reading["reading"])
 
     with open(RPGARDEN_LOG_FILE, mode='a') as logFile:
         logFile_writer = csv.writer(logFile, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
@@ -106,7 +105,11 @@ try:
     # ==================================================================================================
     # Code for saving the data to a remote MySQL database (wide table)
     # ==================================================================================================
-    print("\nCollecting data to save to MySQL...")
+    print("\Formatting data to save to MySQL...")
+    fieldNames = []
+    fieldVals = []
+    fieldFormats = []
+
     fieldNames.append("pk")
     fieldVals.append(None)
     fieldFormats.append("%s")
@@ -114,6 +117,15 @@ try:
     fieldNames.append("host")
     fieldVals.append(socket.gethostname())
     fieldFormats.append("%s")
+
+    fieldNames.append(clockReading["field_name"])
+    fieldVals.append(clockReading["reading"])
+    fieldFormats.append(clockReading["format"])
+
+    for reading in readings:
+        fieldNames.append(reading["field_name"])
+        fieldVals.append(reading["reading"])
+        fieldFormats.append(reading["format"])
 
     strFieldNames = ','.join(fieldNames) 
     strFieldFormats = ','.join(fieldFormats) 
@@ -150,38 +162,20 @@ try:
     cursor = db.cursor()
     sql = "INSERT INTO rpgarden2 (pk, host, reading_time, sensor_name, sensor_value) VALUES (NULL,  %s, %s, %s, %s)"
 
-    for sensor in sensors:
-        val = sensor.read()
-        if (sensor.type == 'dht'):
-            try:
-                fieldVals = (socket.gethostname(), strCurrentTime, "temperature", sensor.temperature)
-                cursor.execute(sql, fieldVals)
-                db.commit()
-                print("Data Saved for temperature")
+    strCurrentTime = clockReading["reading"]
 
-                fieldVals = (socket.gethostname(), strCurrentTime, "humidity", sensor.humidity)
-                cursor.execute(sql, fieldVals)
-                db.commit()
-                print("Data Saved for humidity")
-            except:
-                # Rollback in case there is any error
-                print(traceback.format_exc())
-                print("!!! Failed to save MySQL data! Sensor: " + sensor.field_name)
-                db.rollback()
-        elif sensor.type != 'clock':
-            try:
-                fieldVals = (socket.gethostname(), strCurrentTime, sensor.field_name, val)
-                # Execute the SQL command
-                cursor.execute(sql, fieldVals)
-                # Commit your changes in the database
-                db.commit()
-                print("Data Saved for " + sensor.field_name)
-            except:
-                # Rollback in case there is any error
-                print(traceback.format_exc())
-                print("!!! Failed to save MySQL data! Sensor: " + sensor.field_name)
-                db.rollback()
-        
+    try:
+        for reading in readings:
+            fieldVals = (socket.gethostname(), strCurrentTime, reading["field_name"], reading["reading"])
+            cursor.execute(sql, fieldVals)
+            print("Data Saved for " + reading["description"])
+
+        db.commit()
+    except:
+        print(traceback.format_exc())
+        print("!!! Failed to save MySQL data! Sensor: " + sensor.field_name)
+        db.rollback()
+
     # disconnect from server
     db.close()
 

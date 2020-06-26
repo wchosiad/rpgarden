@@ -18,6 +18,17 @@ class GenericSensor:
         retVal = self.cfg.get(name)   #   it's not on the sensor object itself
         return retVal
 
+    def readObj(self):
+        sensorResultDict = {
+            "description": self.cfg.description,
+            "sort": self.cfg.sort,
+            "type": self.cfg.type,
+            "field_name": self.cfg.field_name,
+            "format": self.cfg.format,
+            "reading": self.read()
+        }
+        return [sensorResultDict]
+
 # ClockSensor: A "pretend" (software-only) sensor that returns the current time
 class ClockSensor(GenericSensor):
     def __init__(self, iniSectionName):
@@ -73,6 +84,27 @@ class DhtSensor(GenericSensor):
             self.humidity = None
             self.error = dhtVal.error_code
             return {"Error": dhtVal.error_code}
+
+    def readObj(self): # Need to override because we're returning two abjects
+        dhtVal = self.read()
+        if dhtVal.is_valid():
+            sensorResultDict1 = {
+                "description": self.cfg.description_temperature,
+                "sort": int(self.cfg.sort_temperature),
+                "type": self.cfg.type_temperature,
+                "field_name": self.cfg.field_name_temperature,
+                "format": self.cfg.format_temperature,
+                "reading": self.temperature
+            }
+            sensorResultDict2 = {
+                "description": self.cfg.description_humidity,
+                "sort": int(self.cfg.sort_humidity),
+                "type": self.cfg.type_humidity,
+                "field_name": self.cfg.field_name_humidity,
+                "format": self.cfg.format_humidity,
+                "reading": self.humidity
+            }
+        return [sensorResultDict1,sensorResultDict2]
 
 
 # McpSensor: An analog sensor that returns a scaled value between 0 and VALUE_RANGE_SIZE
