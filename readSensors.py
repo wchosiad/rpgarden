@@ -5,9 +5,10 @@ import RPi.GPIO as GPIO
 import csv
 import socket     # Used to get host name
 import traceback
-import MySQLdb    # pip3 install mysqlclient
+import MySQLdb    # sudo apt-get update  - Do these commands to set up mysqldb
+                  # sudo apt-get upgrade
                   # sudo apt-get install python-dev default-libmysqlclient-dev
-                  #
+                  # pip3 install mysqlclient
 
 # These are all Adafruit modules that come with CircuitPython
 # pip3 install adafruit-circuitpython-mcp3xxx
@@ -57,7 +58,7 @@ try:
     # ==================================================================================================
 
     # Collect the data
-    print("\Collecting data...")
+    print("Collecting data...")
     readings = []
     readingsWithClock = []
     clockReading = None # The clock sensor is special because everyone uses it
@@ -105,7 +106,7 @@ try:
     # ==================================================================================================
     # Code for saving the data to a remote MySQL database (wide table)
     # ==================================================================================================
-    print("\Formatting data to save to MySQL...")
+    print("Formatting data to save to MySQL...")
     fieldNames = []
     fieldVals = []
     fieldFormats = []
@@ -138,7 +139,8 @@ try:
     
     try:
         # Execute the SQL command
-        #cursor.execute("SET time_zone = '" + rpgConfig.private['mysql_timezone'] + "';")
+        # cursor.execute("SET time_zone = '" + rpgConfig.private['mysql_timezone'] + "';")
+        #cursor.execute("SET time_zone = 'GMT';")
         cursor.execute(sql, fieldVals)
         # Commit your changes in the database
         db.commit()
@@ -160,13 +162,13 @@ try:
     # Open database connection
     db = MySQLdb.connect(rpgConfig.private['mysql_host'], rpgConfig.private['mysql_user'], rpgConfig.private['mysql_password'], rpgConfig.private['mysql_db'])
     cursor = db.cursor()
-    sql = "INSERT INTO rpgarden2 (pk, host, reading_time, sensor_name, sensor_value) VALUES (NULL,  %s, %s, %s, %s)"
+    sql = "INSERT INTO rpgarden2 (pk, host, reading_time, sensor_name, sensor_type, sensor_value) VALUES (NULL,  %s, %s, %s, %s, %s)"
 
     strCurrentTime = clockReading["reading"]
-
+    print("Raw time: " + strCurrentTime)
     try:
         for reading in readings:
-            fieldVals = (socket.gethostname(), strCurrentTime, reading["field_name"], reading["reading"])
+            fieldVals = (socket.gethostname(), strCurrentTime, reading["field_name"], reading["type"], reading["reading"])
             cursor.execute(sql, fieldVals)
             print("Data Saved for " + reading["description"])
 

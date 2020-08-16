@@ -44,10 +44,10 @@ class ClockSensor(GenericSensor):
             raise(ex)
 
     def read_raw(self):
-        return datetime.datetime.now()
+        return datetime.datetime.now(datetime.timezone( datetime.timedelta(hours=+0) )) # Convert to UTC Time
     
     def read(self):
-        return datetime.datetime.now().strftime(self.clock_format)
+        return datetime.datetime.now(datetime.timezone( datetime.timedelta(hours=+0) )).strftime(self.clock_format) # Convert to UTC Time
 
 # DhtSensor: A digital sensor that returns the current temperature and humidity
 class DhtSensor(GenericSensor):
