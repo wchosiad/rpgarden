@@ -73,12 +73,12 @@ try:
     # Sort readings
     readings.sort(key=lambda x: x["sort"], reverse=False)  
     readingsWithClock.sort(key=lambda x: x["sort"], reverse=False)  
-    print("\Data collected.")
+    print("Data collected.")
 
     # ==================================================================================================
     # Code for saving the data to a tab-delimited file
     # ==================================================================================================
-    print("\Saving Data to file.")
+    print("Saving Data to file.")
     # Check if the path to the log file exists, if not, create it
     if not os.path.exists(RPGARDEN_LOG_DIR):
         os.makedirs(RPGARDEN_LOG_DIR)
