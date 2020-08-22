@@ -28,11 +28,12 @@ def getUTCTime():
     return datetime.datetime.now(datetime.timezone( datetime.timedelta(hours=+0) )).strftime(clock_format)
 
 # ==================================================================================================
-# initialize() -Initialize pins and other stuff, Returns the mcp variable for handling the dtac
+# initialize() -Initialize pins and other stuff, Returns the mcp variable for handling the 
+# digital-to-analog converter chip. That will be needed for setting up sensors, later
 # ==================================================================================================
 def initialize(rpgConfig):
     try:
-        # That file contains the constants you can change to match your wiring
+        # This file contains the constants you can change to match your wiring
         if rpgConfig is None:
             rpgConfig = RpgConfig()
 
