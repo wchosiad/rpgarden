@@ -29,26 +29,6 @@ class GenericSensor:
         }
         return [sensorResultDict]
 
-# ClockSensor: A "pretend" (software-only) sensor that returns the current time
-class ClockSensor(GenericSensor):
-    def __init__(self, iniSectionName):
-        try:
-            cfg = Config.ClockSensorConfig(iniSectionName)
-            self.cfg = cfg
-
-        except Exception as ex:
-            # Handle other exceptions
-            print(type(ex))
-            print(ex.args)
-            print(ex)
-            raise(ex)
-
-    def read_raw(self):
-        return datetime.datetime.now(datetime.timezone( datetime.timedelta(hours=+0) )) # Convert to UTC Time
-    
-    def read(self):
-        return datetime.datetime.now(datetime.timezone( datetime.timedelta(hours=+0) )).strftime(self.clock_format) # Convert to UTC Time
-
 # DhtSensor: A digital sensor that returns the current temperature and humidity
 class DhtSensor(GenericSensor):
     def __init__(self, iniSectionName):
